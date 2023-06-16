@@ -10,7 +10,7 @@ from schools import schools
 
 # variables for mpesa payload
 ts = dt.now().strftime("%Y%m%d%H%M%S")
-pk = 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919' # practice sandbox passkey
+pk = 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'  # Practice sandbox passkey
 pw = base64.b64encode(f'{174379}{pk}{ts}'.encode('utf-8')).decode()
 payload = {
   "BusinessShortCode": 174379,
@@ -21,7 +21,7 @@ payload = {
   "PartyA": 254708374149,  # user phone number
   "PartyB": 174379,
   "PhoneNumber": 254708374149,  # receives prompt
-  "CallBackURL": "https://ec12-196-202-207-77.ngrok-free.app/results",
+  "CallBackURL": "https://lipa-fees.onrender.com/results",
   "AccountReference": "Payx",  # school code
   "TransactionDesc": "lets test this out"  # student number
 }
@@ -36,6 +36,7 @@ app = Flask(__name__)
 start = 'Welcome to Lipa Fees\n\
 Replace the text in UPPER with actual values\n\
 Reply "/search SCH-FIRSTNAME"'
+
 
 @app.route('/lipafees', methods=['POST'])
 def main():
@@ -60,19 +61,20 @@ def main():
         sendSMS(user, body)
     return 'success'
 
+
 @app.route('/results', methods=['GET', 'POST'])
 def callback():
     """return user response"""
     resp = request.get_json(force=True)['Body']['stkCallback']
     if resp['ResultCode'] == 0:
-        items =  resp['CallbackMetadata']['Item']
+        items = resp['CallbackMetadata']['Item']
         body = 'Transaction Success\nMpesaReceiptNumber: {}\n\
 Amount: {}\n'.format(items[1]['Value'], items[0]['Value'])
     else:
         body = 'Error: ' + resp['ResultDesc']
+        return body
     sendSMS(str(user), body)
-    return ''
-
+    return 'success update'
 
 
 def sendSMS(recipient, body):
@@ -81,6 +83,7 @@ def sendSMS(recipient, body):
         body=body,
         to=recipient
     )
+
 
 def get_school(data):
     """return list of schools that start with start"""
@@ -97,6 +100,7 @@ def get_school(data):
     mydata += 'Reply with:\n"/code CODE STUDENTNUMBER AMOUNT"'
     return mydata
 
+
 def set_payload(ref):
     """update payload"""
     if len(ref) != 4:
@@ -109,6 +113,7 @@ def set_payload(ref):
     return 'Reply:\n"/pay 1" to pay with this whatsapp number\n\
 "/pay 254xxxxxxxxx" to use another number'
 
+
 def confirm(ref):
     """calls the stk prompt"""
     if len(ref) != 2:
@@ -120,6 +125,3 @@ def confirm(ref):
     if resp.get('ResponseCode') == '0':
         return resp.get('CustomerMessage')
     return 'Error: {}'.format(resp.get('errorMessage'))
-
-if __name__ == '__main__':
-    app.run('0.0.0.0', port=5000, debug=True)
