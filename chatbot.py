@@ -2,6 +2,7 @@
 """chatbot module for whatsapp main app
 """
 import base64
+import os
 from datetime import datetime as dt
 from flask import Flask, request
 from twilio.rest import Client
@@ -27,8 +28,8 @@ payload = {
 }
 
 # variables for twilio API
-account_sid = 'AC9f6ef4102f335aec948141101b178abd'
-auth_token = '9d0fcb62465420d9e82100b2b62b5e49'
+account_sid = os.getenv('ACCOUNT_SID')
+auth_token = os.getenv('AUTH_TOKEN')
 client = Client(account_sid, auth_token)
 
 app = Flask(__name__)
@@ -36,6 +37,12 @@ app = Flask(__name__)
 start = 'Welcome to Lipa Fees\n\
 Replace the text in UPPER with actual values\n\
 Reply "/search SCH-FIRSTNAME"'
+
+
+@app.route('/test')
+def hello():
+    """checks if service is running"""
+    return '', 200
 
 
 @app.route('/lipafees', methods=['POST'])
@@ -65,6 +72,7 @@ def main():
 @app.route('/results', methods=['GET', 'POST'])
 def callback():
     """return user response"""
+    print('received response')
     resp = request.get_json(force=True)['Body']['stkCallback']
     if resp['ResultCode'] == 0:
         items = resp['CallbackMetadata']['Item']
