@@ -32,6 +32,7 @@ pip install -r requirements.txt
 ```
 4. Set up environment variables
     - Register accounts on [twilio](https://www.twilio.com/en-us) and [M-PESA API](https://developer.safaricom.co.ke/APIs)
+    - Set the app's secret key under the environment variable `SK`
     - Set up environment variables `CS `and `CK` using values from Daraja App's Consumer and Secret Key
     - Set up environment variables `ACCOUNT_SID` and `AUTH_TOKEN` using credentials from Twilio account
     - Replace the variable `pk` in chatbot.py with your daraja App's passkey

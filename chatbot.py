@@ -4,14 +4,15 @@
 import base64
 import os
 from datetime import datetime as dt
-from flask import Flask, request
+from flask import Flask, request, session
 from twilio.rest import Client
 from stkPush import make_pay
 from schools import schools
 
 # variables for mpesa payload
 ts = dt.now().strftime("%Y%m%d%H%M%S")
-pk = 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'  # Practice sandbox passkey
+# Practice sandbox passkey
+pk = 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'
 pw = base64.b64encode(f'{174379}{pk}{ts}'.encode('utf-8')).decode()
 payload = {
   "BusinessShortCode": 174379,
@@ -27,12 +28,11 @@ payload = {
   "TransactionDesc": "lets test this out"  # student number
 }
 
-# variables for twilio API
-account_sid = os.getenv('ACCOUNT_SID')
-auth_token = os.getenv('AUTH_TOKEN')
-client = Client(account_sid, auth_token)
+# setup the twilio client
+client = Client(os.getenv('ACCOUNT_SID'), os.getenv('AUTH_TOKEN'))
 
 app = Flask(__name__)
+app.secret_key = os.getenv('SK')
 
 start = 'Welcome to Lipa Fees\n\
 Replace the text in UPPER with actual values\n\
@@ -48,7 +48,6 @@ def hello():
 @app.route('/lipafees', methods=['POST'])
 def main():
     """Main entry point for chatbot"""
-    global user
     commands = {
         '/start': start,
         '/search': get_school,
@@ -56,16 +55,17 @@ def main():
         '/pay': confirm,
     }
     if request.method == 'POST':
-        user = request.values.get('From')
+        session['user'] = request.values.get('From')
         cmd = request.values.get('Body').split(' ')
         cmd1 = cmd[0].lower()
         if cmd1 not in list(commands.keys()):
-            body = f'Hi {request.values.get("ProfileName")},\nReply with "/start" to initiate payment'
+            body = f'Hi {request.values.get("ProfileName")},\nReply with\
+"/start" to initiate payment'
         elif cmd1 == '/start':
             body = commands['/start']
         else:
             body = commands.get(cmd1)(cmd)
-        sendSMS(user, body)
+        sendSMS(session['user'], body)
     return 'success'
 
 
@@ -81,7 +81,8 @@ Amount: {}\n'.format(items[1]['Value'], items[0]['Value'])
     else:
         body = 'Error: ' + resp['ResultDesc']
         return body
-    sendSMS(str(user), body)
+    sendSMS(session['user'], body)
+    del session['user']
     return 'success update'
 
 
@@ -104,7 +105,8 @@ def get_school(data):
             if choice in school:
                 mydata += '{}\n code = {}\n'.format(school, str(code))
     if mydata == '':
-        return 'No results found for {}.\nReply with\n"/search SCHOOL-FIRSTNAME"'.format(choice)
+        return 'No results found for {}.\
+\nReply with\n"/search SCHOOL-FIRSTNAME"'.format(choice)
     mydata += 'Reply with:\n"/code CODE STUDENTNUMBER AMOUNT"'
     return mydata
 
@@ -113,7 +115,8 @@ def set_payload(ref):
     """update payload"""
     if len(ref) != 4:
         return 'Reply with:\n"/code CODE STUDENTNUMBER AMOUNT"'
-    payload['PartyA'] = payload['PhoneNumber'] = int(request.values.get('From')[10:])
+    payload['PartyA'] = payload['PhoneNumber'] = int(request.values.get('From')
+                                                     [10:])
     payload['AccountReference'] = ref[1]
     payload['TransactionDesc'] = ref[2]
     payload['Amount'] = ref[3]
